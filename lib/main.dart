@@ -36,6 +36,10 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   DynamicForm? _loadedJsonForm;
+  List<TextEditingController> _inputFieldController = [];
+  String? _outputApi;
+  final Map<String, dynamic> dataOutput = Map<String, dynamic>();
+
   final SignatureController _controller = SignatureController(
     penStrokeWidth: 1,
     penColor: Colors.red,
@@ -52,7 +56,11 @@ class _MyHomePageState extends State<MyHomePage> {
     loadForm().then((value) {
       setState(() {
         _loadedJsonForm = value;
-        print(_loadedJsonForm!.definitions[0].type);
+
+        //create multiple controller
+        for (var item in _loadedJsonForm!.definitions) {
+          _inputFieldController.add(TextEditingController());
+        }
       });
     });
   }
@@ -84,7 +92,39 @@ class _MyHomePageState extends State<MyHomePage> {
                   return TextButton(
                     child: Text("Save"),
                     style: ButtonStyle(backgroundColor: MaterialStateProperty.all(Colors.orange)),
-                    onPressed: () => {},
+                    onPressed: () => {
+                      for (var item in _inputFieldController)
+                        {
+                          if (_loadedJsonForm!.definitions[_inputFieldController.indexOf(item)].type != "sectionHeader")
+                            {
+                              dataOutput[_loadedJsonForm!.definitions[_inputFieldController.indexOf(item)].key] = item.text,
+                            }
+                        },
+                      print(dataOutput),
+                      print(json.encode(dataOutput)),
+                    },
+                  );
+                } else if (_loadedJsonForm!.definitions[index].type == "number") {
+                  return Column(
+                    children: [
+                      const Padding(padding: EdgeInsets.all(8.0)),
+                      Container(
+                        alignment: AlignmentDirectional.topStart,
+                        child: Text(
+                          _loadedJsonForm!.definitions[index].label,
+                          textAlign: TextAlign.left,
+                        ),
+                      ),
+                      const Padding(padding: EdgeInsets.all(5.0)),
+                      FormBuilderTextField(
+                        keyboardType: TextInputType.number,
+                        name: _loadedJsonForm!.definitions[index].label,
+                        controller: _inputFieldController[index],
+                        decoration: const InputDecoration(
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ],
                   );
                 } else if (_loadedJsonForm!.definitions[index].type == "textfield") {
                   return Column(
@@ -100,6 +140,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       const Padding(padding: EdgeInsets.all(5.0)),
                       FormBuilderTextField(
                         name: _loadedJsonForm!.definitions[index].label,
+                        controller: _inputFieldController[index],
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),
@@ -134,6 +175,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       Padding(padding: EdgeInsets.all(5.0)),
                       FormBuilderTextField(
                         name: _loadedJsonForm!.definitions[index].label,
+                        controller: _inputFieldController[index],
                         maxLines: 10,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(),
@@ -142,9 +184,17 @@ class _MyHomePageState extends State<MyHomePage> {
                     ],
                   );
                 } else if (_loadedJsonForm!.definitions[index].type == "checkbox") {
+                  //Initialize value
+                  _inputFieldController[index].text = "false";
                   return Column(
                     children: [
-                      FormBuilderCheckbox(name: _loadedJsonForm!.definitions[index].label, title: Text(_loadedJsonForm!.definitions[index].label))
+                      FormBuilderCheckbox(
+                        name: _loadedJsonForm!.definitions[index].label,
+                        title: Text(_loadedJsonForm!.definitions[index].label),
+                        onChanged: (dynamic val) => {
+                          _inputFieldController[index].text = val.toString(),
+                        },
+                      )
                     ],
                   );
                 } else if (_loadedJsonForm!.definitions[index].type == "fileUpload") {
@@ -185,6 +235,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       const Padding(padding: EdgeInsets.all(5.0)),
                       FormBuilderRadioGroup(
                         name: _loadedJsonForm!.definitions[index].label,
+                        onChanged: (dynamic val) => _inputFieldController[index].text = val,
                         options: [for (var i in _loadedJsonForm!.definitions[index].values) i.label.toString()]
                             .map((lang) => FormBuilderFieldOption(
                                   value: lang,
@@ -281,7 +332,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<DynamicForm> loadForm() async {
     try {
-      String response = await rootBundle.loadString('assets/form_2.json');
+      String response = await rootBundle.loadString('assets/form_3.json');
 
       DynamicForm result = DynamicForm.fromJson(json.decode(response));
 
