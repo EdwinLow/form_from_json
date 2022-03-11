@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:function_tree/function_tree.dart';
 import 'package:signature/signature.dart';
 
 void main() {
@@ -38,6 +39,8 @@ class _MyHomePageState extends State<MyHomePage> {
   DynamicForm? _loadedJsonForm;
   List<TextEditingController> _inputFieldController = [];
   String? _outputApi;
+
+  List<String?> calculationFormulaList = [];
   final Map<String, dynamic> dataOutput = Map<String, dynamic>();
 
   final SignatureController _controller = SignatureController(
@@ -60,9 +63,60 @@ class _MyHomePageState extends State<MyHomePage> {
         //create multiple controller
         for (var item in _loadedJsonForm!.definitions) {
           _inputFieldController.add(TextEditingController());
+          var calculationFormula = item.calculateValue.replaceAll('value =', '');
+          calculationFormulaList.add(calculationFormula);
         }
       });
     });
+  }
+
+  void _onChangedNumeric(String key) {
+    String newFormula;
+    for (var calculationFormula in calculationFormulaList) {
+      if (calculationFormula!.isNotEmpty) {
+        if (calculationFormula.contains(key)) {
+          newFormula = calculationFormula;
+          newFormula.split(" ").forEach(
+            (item) {
+              if (item.contains('data')) {
+                var variableIndex = _loadedJsonForm!.definitions.indexWhere((element) => element.key == item.substring(5));
+                newFormula =
+                    newFormula.replaceAll(item, _inputFieldController[variableIndex].text.isEmpty ? '0' : _inputFieldController[variableIndex].text);
+              }
+            },
+          );
+
+          var calculateV = newFormula.interpret().toString();
+          // var calculateV = newFormula.interpret().toInt().toString(); to format the output.
+          var outputIndex = calculationFormulaList.indexOf(calculationFormula);
+          _inputFieldController[outputIndex].text = calculateV;
+        }
+      }
+    }
+  }
+
+  void _onChangedText(String key) {
+    String outputString = '';
+
+    for (var calculationFormula in calculationFormulaList) {
+      if (calculationFormula!.isNotEmpty) {
+        var outputIndex = calculationFormulaList.indexOf(calculationFormula);
+        if (calculationFormula.contains(key)) {
+          calculationFormula.split(" ").forEach(
+            (item) {
+              if (item.contains('data')) {
+                var variableIndex = _loadedJsonForm!.definitions.indexWhere((element) => element.key.contains(item.substring(5).replaceAll(';', '')));
+                outputString = outputString + _inputFieldController[variableIndex].text;
+              }
+            },
+          );
+
+          print(outputString);
+
+          _inputFieldController[outputIndex].text = outputString;
+        }
+      }
+    }
   }
 
   @override
@@ -120,6 +174,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         keyboardType: TextInputType.number,
                         name: _loadedJsonForm!.definitions[index].label,
                         controller: _inputFieldController[index],
+                        onChanged: (value) => _onChangedNumeric(_loadedJsonForm!.definitions[index].key),
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),
@@ -141,6 +196,7 @@ class _MyHomePageState extends State<MyHomePage> {
                       FormBuilderTextField(
                         name: _loadedJsonForm!.definitions[index].label,
                         controller: _inputFieldController[index],
+                        onChanged: (value) => _onChangedText(_loadedJsonForm!.definitions[index].key),
                         decoration: const InputDecoration(
                           border: OutlineInputBorder(),
                         ),
@@ -371,6 +427,7 @@ class DynamicFormDefinition {
     required this.label,
     required this.values,
     required this.footer,
+    required this.calculateValue,
   });
 
   String id;
@@ -381,6 +438,7 @@ class DynamicFormDefinition {
   String label;
   List<dynamic> values;
   String footer;
+  String calculateValue;
 
   factory DynamicFormDefinition.fromJson(dynamic json) => DynamicFormDefinition(
         id: json["id"] == null ? null : json["id"],
@@ -391,6 +449,7 @@ class DynamicFormDefinition {
         label: json["label"] == null ? null : json["label"],
         values: json["values"] == null ? [] : json["values"].map((n) => DynamicFormDefinitionValues.fromJson(n)).toList(),
         footer: json["footer"] == null ? "" : json["footer"],
+        calculateValue: json["calculateValue"] == null ? "" : json["calculateValue"],
       );
 }
 
