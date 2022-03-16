@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
+import 'package:form_from_json/approval_request_list.dart';
 import 'package:function_tree/function_tree.dart';
 import 'package:signature/signature.dart';
 
@@ -22,7 +23,8 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Add Form Entry'),
+      // home: const MyHomePage(title: 'Add Form Entry'),
+      home: const ApprovalPage(),
     );
   }
 }
@@ -135,6 +137,16 @@ class _MyHomePageState extends State<MyHomePage> {
       // floatingActionButton: FloatingActionButton(onPressed: () => refreshForm()),
       appBar: AppBar(
         title: Text(widget.title),
+        actions: [
+          GestureDetector(
+              child: Icon(Icons.next_plan),
+              onTap: () => {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ApprovalPage()),
+                    )
+                  })
+        ],
       ),
       body: _loadedJsonForm == null
           ? const CircularProgressIndicator()
